@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Typy generowane przez silnik Claude Code w każdym modzie
+*/.claude-plugin/types/
+
+# Node / TypeScript
+node_modules/
+*.tsbuildinfo
+
+# Lokalne ustawienia Claude Code
+.claude/settings.local.json
