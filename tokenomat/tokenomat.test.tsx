@@ -1,3 +1,4 @@
+import type { PromptEditInput } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
 const BAND = {
@@ -44,8 +45,17 @@ test('the band shows nothing before the first turn', async ($, on) => {
   await ui.unmount()
 })
 
+const usageNow = (tokens?: number) => ({
+  value: {
+    startedAt: 0,
+    context: { window: 200_000, ...(tokens === undefined ? {} : { tokens }) },
+    rateLimits: [],
+  },
+})
+
 test('the band counts the last message and the session, on every surface', async ($, on) => {
   on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('session.usage', () => usageNow())
 
   await $.turn.complete(turn('t1', 1200, 300))
   await $.turn.complete(turn('t2', 5000, 500))
@@ -59,4 +69,43 @@ test('the band counts the last message and the session, on every surface', async
     expect((await ui.find({ type: 'Text', text: /^107k$/ }))?.text).toBe('107k')
     await ui.unmount()
   }
+})
+
+test('the band estimates the draft live and clears it on submit', async ($, on) => {
+  on('session.usage', () => usageNow(30_000))
+  on('prompt.edit', (_, e) => {
+    const text = e.text.slice(0, e.start) + e.inputText + e.text.slice(e.end)
+
+    return { text, cursor: e.start + e.inputText.length }
+  })
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+
+  // The kit raises prompt.edit as a session does, though its typings leave it off `$.prompt`.
+  const prompt = $.prompt as unknown as { edit: (e: PromptEditInput) => Promise<unknown> }
+  const typing = 'x'.repeat(400)
+  await prompt.edit({
+    origin: { kind: 'composer' },
+    text: '',
+    cursor: 0,
+    start: 0,
+    end: 0,
+    inputText: typing,
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  // 400 ASCII chars ≈ 100 tokens; with the 30k context ≈ 30.1k
+  expect((await ui.find({ type: 'Text', text: /^≈100$/ }))?.text).toBe('≈100')
+  expect((await ui.find({ type: 'Text', text: /z kontekstem ≈30k/ }))?.text).toBe(
+    ' (z kontekstem ≈30k)',
+  )
+
+  await $.prompt.submit({ text: typing, wait: false, origin: { kind: 'composer' } })
+  expect(await ui.find({ type: 'Text', text: /szkic/ })).toBe(undefined)
+  await ui.unmount()
 })

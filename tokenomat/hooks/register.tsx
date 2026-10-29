@@ -8,6 +8,7 @@ const session = atom({ plugin: 'tokenomat', key: 'session' } as const, {
   input: 0,
   output: 0,
 })
+const draft = atom({ plugin: 'tokenomat', key: 'draft' } as const, '')
 
 // Everything the API read as input counts as sent: uncached, cache-written and cache-read.
 const toTally = (u: ModelUsage): Tally => ({
@@ -16,6 +17,18 @@ const toTally = (u: ModelUsage): Tally => ({
 })
 
 const total = (t: Tally) => t.input + t.output
+
+// No tokenizer here: ~4 ASCII chars per token, non-ASCII (Polish diacritics, emoji) much denser.
+export const estimate = (text: string) => {
+  let ascii = 0
+  let other = 0
+  for (const ch of text) {
+    if (ch.charCodeAt(0) < 128) ascii += 1
+    else other += 1
+  }
+
+  return Math.ceil(ascii / 4 + other / 1.5)
+}
 
 const fmt = (n: number) =>
   n >= 1_000_000
@@ -27,6 +40,23 @@ const fmt = (n: number) =>
         : String(n)
 
 export const register: Register = on => {
+  on('prompt.edit', async ($, e, next) => {
+    const box = await next(e)
+
+    if (box.text !== e.text) {
+      await update($, draft, () => box.text)
+    }
+
+    return box
+  })
+
+  // Not prompt.change: the 2.1.294 CLI does not know it yet. A submit empties the box.
+  on('prompt.submit', async ($, e, next) => {
+    await update($, draft, () => '')
+
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     if (e.usage) {
       const turn = toTally(e.usage)
@@ -46,27 +76,51 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const turn = await read($, last)
+    const text = await read($, draft)
 
-    if (e.props.hasSurvey || turn === null) {
+    if (e.props.hasSurvey || (turn === null && text === '')) {
       return next(e)
     }
 
     const sum = await read($, session)
+    const { context } = await $.session.usage()
+    const typed = estimate(text)
     const { Box, Text } = $.ui.resolve(e)
 
     return (
       <Box>
-        <Text bold>🪙 Tokenomat</Text>
-        <Text dimColor> · wiadomość </Text>
-        <Text>{fmt(total(turn))}</Text>
-        <Text dimColor>
-          {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+        <Text bold color="claude">
+          🪙 Tokenomat
         </Text>
-        <Text dimColor> · sesja </Text>
-        <Text bold>{fmt(total(sum))}</Text>
-        <Text dimColor>
-          {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
-        </Text>
+        {text !== '' && (
+          <>
+            <Text dimColor> · ✎ szkic </Text>
+            <Text bold color="warning">
+              ≈{fmt(typed)}
+            </Text>
+            {context.tokens !== undefined && (
+              <Text dimColor> (z kontekstem ≈{fmt(context.tokens + typed)})</Text>
+            )}
+          </>
+        )}
+        {turn !== null && (
+          <>
+            <Text dimColor> · wiadomość </Text>
+            <Text bold color="suggestion">
+              {fmt(total(turn))}
+            </Text>
+            <Text dimColor>
+              {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+            </Text>
+            <Text dimColor> · sesja </Text>
+            <Text bold color="success">
+              {fmt(total(sum))}
+            </Text>
+            <Text dimColor>
+              {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
+            </Text>
+          </>
+        )}
       </Box>
     )
   })
