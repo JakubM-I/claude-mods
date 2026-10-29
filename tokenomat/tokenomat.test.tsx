@@ -51,6 +51,23 @@ test('the band shows every counter at zero before anything happens', async ($, o
   await ui.unmount()
 })
 
+test('the band stays when the context read fails mid-turn', async ($, on) => {
+  on('session.usage', () => {
+    throw new Error('busy')
+  })
+
+  const ui = await $.ui.mount({
+    ...BAND,
+    props: { ...BAND.props, isWorking: true },
+    surface: 'desktop',
+  })
+
+  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
+    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
+  )
+  await ui.unmount()
+})
+
 test('the band yields to a survey', async ($, on) => {
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)

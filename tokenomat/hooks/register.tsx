@@ -83,7 +83,11 @@ export const register: Register = on => {
     const turn = (await read($, last)) ?? { input: 0, output: 0 }
     const sum = await read($, session)
     const typed = estimate(await read($, draft))
-    const { context } = await $.session.usage()
+    // A failed read must not cost the whole band (a throw while drawing hides it).
+    const contextTokens = await $.session.usage().then(
+      u => u.context.tokens ?? 0,
+      () => 0,
+    )
     const { Text } = $.ui.resolve(e)
 
     // One Text with nested runs: the line flows and wraps as a whole instead of
@@ -96,7 +100,7 @@ export const register: Register = on => {
         <Text bold color="warning">
           ≈{fmt(typed)}
         </Text>
-        <Text dimColor> (z kontekstem ≈{fmt((context.tokens ?? 0) + typed)})</Text>
+        <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
         <Text dimColor> · wiadomość </Text>
         <Text bold color="suggestion">
           {fmt(total(turn))}
