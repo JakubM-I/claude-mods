@@ -1,0 +1,9 @@
+{
+  "name": "git-branches",
+  "version": "0.2.0",
+  "description": "Panel boczny z gałęziami repozytorium: main na górze, ostatni commit i czy gałąź jest wciągnięta do main",
+  "author": {
+    "name": "Jakub Musiałowski"
+  },
+  "types": "./types/index.d.ts"
+}

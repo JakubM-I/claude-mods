@@ -8,6 +8,7 @@ Każdy mod żyje we własnym katalogu i powstaje na własnej gałęzi `mod/<nazw
 | Mod | Opis |
 | --- | --- |
 | [tokenomat](tokenomat/) | Licznik tokenów nad polem wiadomości: ostatnia wiadomość i suma w sesji |
+| [git-branches](git-branches/) | Panel boczny z gałęziami repozytorium: main na górze, ostatni commit i czy gałąź jest wciągnięta do main |
 
 ## Instalacja
 
