@@ -75,16 +75,19 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const turn = await read($, last)
-    const text = await read($, draft)
-
-    if (e.props.hasSurvey || (turn === null && text === '')) {
+    if (e.props.hasSurvey) {
       return next(e)
     }
 
+    // Always drawn, every counter from zero, so the layout never jumps.
+    const turn = (await read($, last)) ?? { input: 0, output: 0 }
     const sum = await read($, session)
-    const { context } = await $.session.usage()
-    const typed = estimate(text)
+    const typed = estimate(await read($, draft))
+    // A failed read must not cost the whole band (a throw while drawing hides it).
+    const contextTokens = await $.session.usage().then(
+      u => u.context.tokens ?? 0,
+      () => 0,
+    )
     const { Text } = $.ui.resolve(e)
 
     // One Text with nested runs: the line flows and wraps as a whole instead of
@@ -93,37 +96,25 @@ export const register: Register = on => {
       <Text wrap="wrap">
         {/* Non-breaking: the desktop collapses a run of plain spaces into one. */}
         <Text>🪙{'\u00a0\u00a0'}</Text>
-        {text !== '' && <Text dimColor> ✎ szkic </Text>}
-        {text !== '' && (
-          <Text bold color="warning">
-            ≈{fmt(typed)}
-          </Text>
-        )}
-        {text !== '' && context.tokens !== undefined && (
-          <Text dimColor> (z kontekstem ≈{fmt(context.tokens + typed)})</Text>
-        )}
-        {turn !== null && <Text dimColor>{text !== '' ? ' · ' : ' '}wiadomość </Text>}
-        {turn !== null && (
-          <Text bold color="suggestion">
-            {fmt(total(turn))}
-          </Text>
-        )}
-        {turn !== null && (
-          <Text dimColor>
-            {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
-          </Text>
-        )}
-        {turn !== null && <Text dimColor> · sesja </Text>}
-        {turn !== null && (
-          <Text bold color="success">
-            {fmt(total(sum))}
-          </Text>
-        )}
-        {turn !== null && (
-          <Text dimColor>
-            {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
-          </Text>
-        )}
+        <Text dimColor> ✎ szkic </Text>
+        <Text bold color="warning">
+          ≈{fmt(typed)}
+        </Text>
+        <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
+        <Text dimColor> · wiadomość </Text>
+        <Text bold color="suggestion">
+          {fmt(total(turn))}
+        </Text>
+        <Text dimColor>
+          {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+        </Text>
+        <Text dimColor> · sesja </Text>
+        <Text bold color="success">
+          {fmt(total(sum))}
+        </Text>
+        <Text dimColor>
+          {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
+        </Text>
       </Text>
     )
   })
