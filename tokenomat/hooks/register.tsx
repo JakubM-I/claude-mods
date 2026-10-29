@@ -91,7 +91,7 @@ export const register: Register = on => {
     // each run becoming its own block (the desktop stacked them in a column).
     return (
       <Text wrap="wrap">
-        <Text>🪙</Text>
+        <Text>🪙{' '}</Text>
         {text !== '' && <Text dimColor> ✎ szkic </Text>}
         {text !== '' && (
           <Text bold color="warning">
