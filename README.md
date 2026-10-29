@@ -7,7 +7,7 @@ Każdy mod żyje we własnym katalogu i powstaje na własnej gałęzi `mod/<nazw
 
 | Mod | Opis |
 | --- | --- |
-| _(jeszcze żadnego)_ | |
+| [tokenomat](tokenomat/) | Licznik tokenów nad polem wiadomości: ostatnia wiadomość i suma w sesji |
 
 ## Instalacja
 

@@ -1,0 +1,9 @@
+{
+  "name": "tokenomat",
+  "version": "0.1.0",
+  "description": "Licznik tokenów nad polem wiadomości: ostatnia wiadomość i suma w sesji",
+  "author": {
+    "name": "Jakub Musiałowski"
+  },
+  "types": "./types/index.d.ts"
+}
