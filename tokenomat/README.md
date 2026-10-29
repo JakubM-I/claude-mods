@@ -1,6 +1,6 @@
 # 🪙 Tokenomat
 
-Pasek nad polem wiadomości w Claude Code z dwoma licznikami:
+Pasek nad polem wiadomości w Claude Code z trzema licznikami:
 
 ```
 🪙 ✎ szkic ≈42 (z kontekstem ≈35k) · wiadomość 5.5k (↑5.0k ↓500) · sesja 107k (↑106k ↓800)
