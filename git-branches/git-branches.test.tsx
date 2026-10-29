@@ -81,10 +81,11 @@ test('main on top, then each branch with its last commit and merge state', async
     const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
     const at = (re: RegExp) => texts.findIndex(t => re.test(t))
 
-    expect(at(/◆ main/)).toBe(0)
-    expect(texts.some(t => /● bieżąca/.test(t))).toBe(true)
-    expect(at(/├ mod\/wip/)).toBeLessThan(at(/├ mod\/picked/))
-    expect(texts).toContain('aaa1111 · wip: half done · Jakub, 2 min temu')
+    expect(texts[0]).toBe('◆')
+    expect(texts[1]).toBe('main ● bieżąca')
+    expect(at(/^mod\/wip$/)).toBeLessThan(at(/^mod\/picked$/))
+    expect(texts).toContain('aaa1111 · wip: half done')
+    expect(texts).toContain('Jakub, 2 min temu')
     expect(texts.some(t => /✗ niewciągnięta · 2 commity ponad main/.test(t))).toBe(true)
     expect(texts.some(t => /main ma 1 commit więcej/.test(t))).toBe(true)
     expect(texts).toContain('✓ wciągnięta do main')
@@ -127,7 +128,24 @@ test('refresh picks up a new branch', async ($, on) => {
 
   extra = ref(' ', 'mod/new', 'eee5555', 5, 'start') + '\n'
   await ui.press({ key: 'refresh' })
-  expect((await ui.find({ type: 'Text', text: /├ mod\/new/ }))?.text).toBe('├ mod/new')
+  expect((await ui.find({ type: 'Text', text: /^mod\/new$/ }))?.text).toBe('mod/new')
+  await ui.unmount()
+})
+
+test('a subject is one line until its arrow is pressed', async ($, on) => {
+  start(on)
+  on('process.run', (_, e) => fakeGit(e.argv))
+
+  await $.command.run(RUN)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const subject = () => ui.find({ type: 'Text', text: 'aaa1111 · wip: half done' })
+
+  expect((await subject())?.props.wrap).toBe('truncate-end')
+  await ui.press({ key: 'subject:mod/wip' })
+  expect((await subject())?.props.wrap).toBe('wrap')
+  expect((await ui.find({ type: 'Button', key: 'subject:mod/wip' }))?.text).toBe('▾')
+  await ui.press({ key: 'subject:mod/wip' })
+  expect((await subject())?.props.wrap).toBe('truncate-end')
   await ui.unmount()
 })
 

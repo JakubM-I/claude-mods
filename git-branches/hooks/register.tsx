@@ -10,6 +10,8 @@ const TITLE = 'Gałęzie'
 const snapshot = atom({ plugin: 'git-branches', key: 'snapshot' } as const, { kind: 'idle' }, {
   shape: 'snapshot-1',
 })
+// Branches whose commit subject is shown whole rather than cut to one line.
+const expanded = atom({ plugin: 'git-branches', key: 'expanded' } as const, [])
 
 type Run = (argv: readonly string[]) => Promise<{ exitCode: number; stdout: string; stderr: string }>
 
@@ -174,9 +176,29 @@ export const register: Register = on => {
     }
 
     const now = snap.takenAt
-    const lastCommit = (b: Branch) => (
-      <Text dimColor wrap="wrap">
-        {b.commit.hash} · {b.commit.subject} · {b.commit.author}, {ago(b.commit.date, now)}
+    const open = new Set(await read($, expanded))
+    const toggle = (name: string) => () =>
+      update($, expanded, list => (list.includes(name) ? list.filter(n => n !== name) : [...list, name]))
+    // One line, cut with an ellipsis; the arrow beside it shows the whole subject.
+    const subject = (b: Branch) => {
+      const isOpen = open.has(b.name)
+
+      return (
+        <Box flexDirection="row" gap={1}>
+          <Box flexGrow={1} flexShrink={1}>
+            <Text dimColor wrap={isOpen ? 'wrap' : 'truncate-end'}>
+              {b.commit.hash} · {b.commit.subject}
+            </Text>
+          </Box>
+          <Button key={`subject:${b.name}`} plain dimColor onPress={toggle(b.name)}>
+            {isOpen ? '▾' : '▸'}
+          </Button>
+        </Box>
+      )
+    }
+    const byline = (b: Branch) => (
+      <Text dimColor wrap="truncate-end">
+        {b.commit.author}, {ago(b.commit.date, now)}
       </Text>
     )
     // A branch just cut from main is reachable from it too, but nothing was merged.
@@ -194,27 +216,32 @@ export const register: Register = on => {
         </Text>
       )
     const current = (b: Branch) => (b.isCurrent ? <Text color="suggestion"> ● bieżąca</Text> : null)
+    // The mark stands in a column of its own, so every line of a branch starts
+    // under its name.
+    const row = (b: Branch, mark: string, isMain: boolean) => (
+      <Box flexDirection="row" marginBottom={1} paddingLeft={isMain ? 0 : 2}>
+        <Box width={2} flexShrink={0}>
+          <Text bold color={isMain ? 'suggestion' : undefined}>
+            {mark}
+          </Text>
+        </Box>
+        <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+          <Text bold color={isMain ? 'suggestion' : undefined} wrap="truncate-end">
+            {b.name}
+            {current(b)}
+          </Text>
+          {subject(b)}
+          {byline(b)}
+          {!isMain && mergeLine(b)}
+        </Box>
+      </Box>
+    )
 
     return (
       <Box flexDirection="column">
-        <Box flexDirection="column" marginBottom={1}>
-          <Text bold color="suggestion">
-            ◆ {snap.main.name}
-            {current(snap.main)}
-          </Text>
-          {lastCommit(snap.main)}
-        </Box>
+        {row(snap.main, '◆', true)}
         {snap.branches.length === 0 && <Text dimColor>Poza {snap.main.name} nie ma innych gałęzi.</Text>}
-        {snap.branches.map(b => (
-          <Box flexDirection="column" marginBottom={1} paddingLeft={2}>
-            <Text bold>
-              ├ {b.name}
-              {current(b)}
-            </Text>
-            {lastCommit(b)}
-            {mergeLine(b)}
-          </Box>
-        ))}
+        {snap.branches.map(b => row(b, '├', false))}
         <Text dimColor>
           {snap.branches.length + 1} gałęzi · stan z {new Date(now * 1000).toLocaleTimeString('pl-PL')}
         </Text>

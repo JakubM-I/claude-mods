@@ -30,6 +30,6 @@ export type Snapshot =
 
 declare module 'claude-code' {
   interface PluginState {
-    'git-branches': { snapshot: Shaped<Snapshot> }
+    'git-branches': { snapshot: Shaped<Snapshot>; expanded: string[] }
   }
 }

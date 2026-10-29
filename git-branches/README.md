@@ -5,21 +5,20 @@ Otwiera się komendą `/git-branches`, obok transkryptu, tak jak panel plików c
 
 ```
 ◆ main ● bieżąca
-8485201 · tokenomat: always show the band · Jakub, 2 godz. temu
+  8485201 · tokenomat: always show the band, every…   ▸
+  Jakub Musiałowski, 2 godz. temu
 
   ├ mod/git-branches
-  aaa1111 · git-branches: add pane · Jakub, 5 min temu
-  ✗ niewciągnięta · 3 commity ponad main · main ma 1 commit więcej
-
-  ├ mod/tokenomat
-  ddd4444 · tokenomat: add band · Jakub, wczoraj
-  ✓ wciągnięta do main
+    aaa1111 · git-branches: add pane                   ▸
+    Jakub Musiałowski, 5 min temu
+    ✗ niewciągnięta · 3 commity ponad main · main ma 1 commit więcej
 ```
 
 - **Na górze gałąź główna**: domyślna gałąź `origin` (`origin/HEAD`), a bez zdalnego repo
   `main`, potem `master`.
 - **Pod nią pozostałe gałęzie lokalne**, od ostatnio zmienianej. Przy każdej ostatni commit:
-  skrót, temat, autor i kiedy.
+  skrót i temat w jednej linii (ucięte; strzałka **▸** rozwija pełny temat), a pod spodem
+  autor i kiedy. Wszystkie linie gałęzi zaczynają się równo z jej nazwą.
 - **Czy wciągnięta do main**:
   - `✓ wciągnięta do main` — każdy commit gałęzi jest już w main (merge, fast-forward);
   - `✓ zmiany są w main (rebase / cherry-pick)` — commity są w main pod innymi hashami;
