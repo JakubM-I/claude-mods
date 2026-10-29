@@ -85,43 +85,47 @@ export const register: Register = on => {
     const sum = await read($, session)
     const { context } = await $.session.usage()
     const typed = estimate(text)
-    const { Box, Text } = $.ui.resolve(e)
+    const { Text } = $.ui.resolve(e)
 
+    // One Text with nested runs: the line flows and wraps as a whole instead of
+    // each run becoming its own block (the desktop stacked them in a column).
     return (
-      <Box>
+      <Text wrap="wrap">
         <Text bold color="claude">
           🪙 Tokenomat
         </Text>
+        {text !== '' && <Text dimColor> · ✎ szkic </Text>}
         {text !== '' && (
-          <>
-            <Text dimColor> · ✎ szkic </Text>
-            <Text bold color="warning">
-              ≈{fmt(typed)}
-            </Text>
-            {context.tokens !== undefined && (
-              <Text dimColor> (z kontekstem ≈{fmt(context.tokens + typed)})</Text>
-            )}
-          </>
+          <Text bold color="warning">
+            ≈{fmt(typed)}
+          </Text>
+        )}
+        {text !== '' && context.tokens !== undefined && (
+          <Text dimColor> (z kontekstem ≈{fmt(context.tokens + typed)})</Text>
+        )}
+        {turn !== null && <Text dimColor> · wiadomość </Text>}
+        {turn !== null && (
+          <Text bold color="suggestion">
+            {fmt(total(turn))}
+          </Text>
         )}
         {turn !== null && (
-          <>
-            <Text dimColor> · wiadomość </Text>
-            <Text bold color="suggestion">
-              {fmt(total(turn))}
-            </Text>
-            <Text dimColor>
-              {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
-            </Text>
-            <Text dimColor> · sesja </Text>
-            <Text bold color="success">
-              {fmt(total(sum))}
-            </Text>
-            <Text dimColor>
-              {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
-            </Text>
-          </>
+          <Text dimColor>
+            {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+          </Text>
         )}
-      </Box>
+        {turn !== null && <Text dimColor> · sesja </Text>}
+        {turn !== null && (
+          <Text bold color="success">
+            {fmt(total(sum))}
+          </Text>
+        )}
+        {turn !== null && (
+          <Text dimColor>
+            {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
+          </Text>
+        )}
+      </Text>
     )
   })
 }

@@ -101,8 +101,9 @@ test('the band estimates the draft live and clears it on submit', async ($, on) 
 
   // 400 ASCII chars ≈ 100 tokens; with the 30k context ≈ 30.1k
   expect((await ui.find({ type: 'Text', text: /^≈100$/ }))?.text).toBe('≈100')
-  expect((await ui.find({ type: 'Text', text: /z kontekstem ≈30k/ }))?.text).toBe(
-    ' (z kontekstem ≈30k)',
+  // The band is one line: the outer Text holds every run.
+  expect((await ui.find({ type: 'Text', text: /Tokenomat/ }))?.text).toBe(
+    '🪙 Tokenomat · ✎ szkic ≈100 (z kontekstem ≈30k)',
   )
 
   await $.prompt.submit({ text: typing, wait: false, origin: { kind: 'composer' } })
