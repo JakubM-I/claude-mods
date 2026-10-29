@@ -3,7 +3,7 @@
 Pasek nad polem wiadomości w Claude Code z dwoma licznikami:
 
 ```
-🪙 Tokenomat · ✎ szkic ≈42 (z kontekstem ≈35k) · wiadomość 5.5k (↑5.0k ↓500) · sesja 107k (↑106k ↓800)
+🪙 ✎ szkic ≈42 (z kontekstem ≈35k) · wiadomość 5.5k (↑5.0k ↓500) · sesja 107k (↑106k ↓800)
 ```
 
 - **szkic** (żółty): przybliżona liczba tokenów wpisywanej wiadomości, liczona na żywo

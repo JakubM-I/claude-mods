@@ -91,10 +91,8 @@ export const register: Register = on => {
     // each run becoming its own block (the desktop stacked them in a column).
     return (
       <Text wrap="wrap">
-        <Text bold color="claude">
-          🪙 Tokenomat
-        </Text>
-        {text !== '' && <Text dimColor> · ✎ szkic </Text>}
+        <Text>🪙</Text>
+        {text !== '' && <Text dimColor> ✎ szkic </Text>}
         {text !== '' && (
           <Text bold color="warning">
             ≈{fmt(typed)}
@@ -103,7 +101,7 @@ export const register: Register = on => {
         {text !== '' && context.tokens !== undefined && (
           <Text dimColor> (z kontekstem ≈{fmt(context.tokens + typed)})</Text>
         )}
-        {turn !== null && <Text dimColor> · wiadomość </Text>}
+        {turn !== null && <Text dimColor>{text !== '' ? ' · ' : ' '}wiadomość </Text>}
         {turn !== null && (
           <Text bold color="suggestion">
             {fmt(total(turn))}
