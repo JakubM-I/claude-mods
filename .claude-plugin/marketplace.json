@@ -11,6 +11,11 @@
       "name": "tokenomat",
       "source": "./tokenomat",
       "description": "Licznik tokenów nad polem wiadomości: ostatnia wiadomość i suma w sesji"
+    },
+    {
+      "name": "git-branches",
+      "source": "./git-branches",
+      "description": "Panel boczny z gałęziami repozytorium: main na górze, ostatni commit i czy gałąź jest wciągnięta do main"
     }
   ]
 }
