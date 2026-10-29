@@ -1,6 +1,6 @@
 {
   "name": "tokenomat",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Licznik tokenów nad polem wiadomości: ostatnia wiadomość i suma w sesji",
   "author": {
     "name": "Jakub Musiałowski"

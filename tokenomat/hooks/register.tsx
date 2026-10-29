@@ -91,7 +91,8 @@ export const register: Register = on => {
     // each run becoming its own block (the desktop stacked them in a column).
     return (
       <Text wrap="wrap">
-        <Text>🪙{' '}</Text>
+        {/* Non-breaking: the desktop collapses a run of plain spaces into one. */}
+        <Text>🪙{'\u00a0\u00a0'}</Text>
         {text !== '' && <Text dimColor> ✎ szkic </Text>}
         {text !== '' && (
           <Text bold color="warning">
