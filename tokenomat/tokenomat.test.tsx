@@ -32,25 +32,40 @@ const turn = (id: string, input: number, output: number, agentId?: string) => ({
   ...(agentId === undefined ? {} : { agentId }),
 })
 
-test('the band shows nothing before the first turn', async ($, on) => {
-  on('ui.render', ($, e) => {
-    const { Text } = $.ui.resolve(e)
-
-    return <Text>engine</Text>
-  })
-
-  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-
-  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
-  await ui.unmount()
-})
-
 const usageNow = (tokens?: number) => ({
   value: {
     startedAt: 0,
     context: { window: 200_000, ...(tokens === undefined ? {} : { tokens }) },
     rateLimits: [],
   },
+})
+
+test('the band shows every counter at zero before anything happens', async ($, on) => {
+  on('session.usage', () => usageNow())
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
+    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
+  )
+  await ui.unmount()
+})
+
+test('the band yields to a survey', async ($, on) => {
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+
+  const ui = await $.ui.mount({
+    ...BAND,
+    props: { ...BAND.props, hasSurvey: true },
+    surface: 'desktop',
+  })
+
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
+  await ui.unmount()
 })
 
 test('the band counts the last message and the session, on every surface', async ($, on) => {
@@ -79,11 +94,6 @@ test('the band estimates the draft live and clears it on submit', async ($, on) 
     return { text, cursor: e.start + e.inputText.length }
   })
   on('prompt.submit', (_, e) => ({ text: e.text }))
-  on('ui.render', ($, e) => {
-    const { Text } = $.ui.resolve(e)
-
-    return <Text>engine</Text>
-  })
 
   // The kit raises prompt.edit as a session does, though its typings leave it off `$.prompt`.
   const prompt = $.prompt as unknown as { edit: (e: PromptEditInput) => Promise<unknown> }
@@ -103,10 +113,10 @@ test('the band estimates the draft live and clears it on submit', async ($, on) 
   expect((await ui.find({ type: 'Text', text: /^≈100$/ }))?.text).toBe('≈100')
   // The band is one line: the outer Text holds every run.
   expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈100 (z kontekstem ≈30k)',
+    '🪙\u00a0\u00a0 ✎ szkic ≈100 (z kontekstem ≈30k) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
   )
 
   await $.prompt.submit({ text: typing, wait: false, origin: { kind: 'composer' } })
-  expect(await ui.find({ type: 'Text', text: /szkic/ })).toBe(undefined)
+  expect((await ui.find({ type: 'Text', text: /^≈\d/ }))?.text).toBe('≈0')
   await ui.unmount()
 })
