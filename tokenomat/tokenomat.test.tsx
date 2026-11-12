@@ -47,8 +47,8 @@ test('the band shows every counter at zero before anything happens', async ($, o
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈0 (z kontekstem ≈0)',
   )
   // Each group is its own Text, spread apart by the Box.
   expect((await ui.find({ type: 'Text', text: /^wiadomość/ }))?.text).toBe('wiadomość 0 (↑0 ↓0)')
@@ -67,8 +67,8 @@ test('the band stays when the context read fails mid-turn', async ($, on) => {
     surface: 'desktop',
   })
 
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈0 (z kontekstem ≈0)',
   )
   await ui.unmount()
 })
@@ -134,8 +134,8 @@ test('the band estimates the draft live and clears it on submit', async ($, on) 
   // 400 ASCII chars ≈ 100 tokens; with the 30k context ≈ 30.1k
   expect((await ui.find({ type: 'Text', text: /^≈100$/ }))?.text).toBe('≈100')
   // The band is one line: the outer Text holds every run.
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈100 (z kontekstem ≈30k)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈100 (z kontekstem ≈30k)',
   )
 
   await $.prompt.submit({ text: typing, wait: false, origin: { kind: 'composer' } })
