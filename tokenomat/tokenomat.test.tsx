@@ -1,6 +1,8 @@
 import type { PromptEditInput } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
+import { tallyTranscript } from './hooks/register'
+
 const BAND = {
   plugin: 'tokenomat',
   component: 'AbovePrompt',
@@ -45,9 +47,12 @@ test('the band shows every counter at zero before anything happens', async ($, o
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈0 (z kontekstem ≈0)',
   )
+  // Each group is its own Text, spread apart by the Box.
+  expect((await ui.find({ type: 'Text', text: /^wiadomość/ }))?.text).toBe('wiadomość 0 (↑0 ↓0)')
+  expect((await ui.find({ type: 'Text', text: /^sesja/ }))?.text).toBe('sesja 0 (↑0 ↓0)')
   await ui.unmount()
 })
 
@@ -62,8 +67,8 @@ test('the band stays when the context read fails mid-turn', async ($, on) => {
     surface: 'desktop',
   })
 
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈0 (z kontekstem ≈0) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈0 (z kontekstem ≈0)',
   )
   await ui.unmount()
 })
@@ -129,11 +134,87 @@ test('the band estimates the draft live and clears it on submit', async ($, on) 
   // 400 ASCII chars ≈ 100 tokens; with the 30k context ≈ 30.1k
   expect((await ui.find({ type: 'Text', text: /^≈100$/ }))?.text).toBe('≈100')
   // The band is one line: the outer Text holds every run.
-  expect((await ui.find({ type: 'Text', text: /^🪙/ }))?.text).toBe(
-    '🪙\u00a0\u00a0 ✎ szkic ≈100 (z kontekstem ≈30k) · wiadomość 0 (↑0 ↓0) · sesja 0 (↑0 ↓0)',
+  expect((await ui.find({ type: 'Text', text: /^✎/ }))?.text).toBe(
+    '✎ szkic ≈100 (z kontekstem ≈30k)',
   )
 
   await $.prompt.submit({ text: typing, wait: false, origin: { kind: 'composer' } })
   expect((await ui.find({ type: 'Text', text: /^≈\d/ }))?.text).toBe('≈0')
+  await ui.unmount()
+})
+
+test('a transcript counts each response once', () => {
+  const row = (id: string, input: number, cached: number, output: number) =>
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        id,
+        usage: {
+          input_tokens: input,
+          cache_read_input_tokens: cached,
+          cache_creation_input_tokens: 0,
+          output_tokens: output,
+        },
+      },
+    })
+  const jsonl = [
+    JSON.stringify({ type: 'user', message: { content: 'hi' } }),
+    row('m1', 100, 900, 50),
+    row('m1', 100, 900, 50),
+    row('m2', 10, 2000, 5),
+    '{"type":"assistant","message":{"id":"m3","usage"',
+  ].join('\n')
+
+  expect(tallyTranscript(jsonl)).toEqual({ input: 3010, output: 55 })
+})
+
+test('a reload takes the session total this session stored', async ($, on) => {
+  const stored = { input: 2_000_000, output: 40_000 }
+  on('session.usage', () => usageNow())
+  on('session.id', () => ({ value: 's1' }))
+  on('store.get', (_, e) => ({ value: e.key === 'session:s1' ? stored : undefined }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Text', text: /^2\.04M$/ }))?.text).toBe('2.04M')
+  await ui.unmount()
+})
+
+test('a resumed conversation is counted from its transcript once', async ($, on) => {
+  const saved: Record<string, unknown> = {}
+  on('session.usage', () => usageNow())
+  on('store.get', (_, e) => ({ value: saved[e.key] }))
+  on('store.set', (_, e) => {
+    saved[e.key] = e.value
+
+    return { value: undefined }
+  })
+  on('fs.read', () => ({
+    value: JSON.stringify({
+      type: 'assistant',
+      message: {
+        id: 'm1',
+        usage: {
+          input_tokens: 5000,
+          cache_read_input_tokens: 95_000,
+          cache_creation_input_tokens: 0,
+          output_tokens: 2000,
+        },
+      },
+    }),
+  }))
+  on('classic.SessionStart', () => ({}))
+
+  await $.classic.SessionStart({
+    source: 'resume',
+    session_id: 's2',
+    transcript_path: '/t/s2.jsonl',
+  })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Text', text: /^102k$/ }))?.text).toBe('102k')
+  expect(saved['session:s2']).toEqual({ input: 100_000, output: 2000 })
   await ui.unmount()
 })

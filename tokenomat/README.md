@@ -3,7 +3,7 @@
 Pasek nad polem wiadomości w Claude Code z trzema licznikami:
 
 ```
-🪙 ✎ szkic ≈42 (z kontekstem ≈35k) · wiadomość 5.5k (↑5.0k ↓500) · sesja 107k (↑106k ↓800)
+🪙  ✎ szkic ≈42 (z kontekstem ≈35k)      wiadomość 5.5k (↑5.0k ↓500)      sesja 107k (↑106k ↓800)
 ```
 
 - **szkic** (żółty): przybliżona liczba tokenów wpisywanej wiadomości, liczona na żywo
@@ -15,7 +15,9 @@ Pasek nad polem wiadomości w Claude Code z trzema licznikami:
 
 Pasek jest widoczny cały czas, od startu sesji, ze wszystkimi licznikami od zera; ustępuje tylko ankietom.
 Kolory biorą się z motywu Claude Code, więc pasują do jasnego i ciemnego.
-Wartości trzymane są w `$.state`, więc przetrwają przeładowanie moda w obrębie sesji.
+Suma sesji jest zapisywana (`$.store`, osobno dla każdej sesji), więc po przeładowaniu moda,
+restarcie aplikacji albo wznowieniu rozmowy liczy dalej od tego, co już było.
+Rozmowę wznowioną pierwszy raz mod przelicza z jej zapisu na dysku (do 4 MiB).
 
 ## Instalacja
 

@@ -30,6 +30,49 @@ export const estimate = (text: string) => {
   return Math.ceil(ascii / 4 + other / 1.5)
 }
 
+// The session total outlives the process in $.store, so a resumed conversation
+// picks up where it left off instead of starting from zero.
+const storeKey = (sessionId: string) => `session:${sessionId}`
+
+const isTally = (v: unknown): v is Tally =>
+  typeof v === 'object' &&
+  v !== null &&
+  typeof (v as Tally).input === 'number' &&
+  typeof (v as Tally).output === 'number'
+
+// Sums the assistant usage in a transcript (JSONL). One API response may be
+// written as several rows sharing its message id, so each id counts once.
+export const tallyTranscript = (jsonl: string): Tally => {
+  const byId = new Map<string, Tally>()
+  for (const line of jsonl.split('\n')) {
+    if (!line.includes('"usage"')) continue
+    try {
+      const row = JSON.parse(line)
+      const msg = row?.message
+      if (row?.type !== 'assistant' || !msg?.usage || typeof msg.id !== 'string') continue
+      const u = msg.usage
+      byId.set(msg.id, {
+        input:
+          (u.input_tokens ?? 0) +
+          (u.cache_creation_input_tokens ?? 0) +
+          (u.cache_read_input_tokens ?? 0),
+        output: u.output_tokens ?? 0,
+      })
+    } catch {
+      // A torn last line while the session writes: skip it.
+    }
+  }
+
+  let input = 0
+  let output = 0
+  for (const t of byId.values()) {
+    input += t.input
+    output += t.output
+  }
+
+  return { input, output }
+}
+
 const fmt = (n: number) =>
   n >= 1_000_000
     ? `${(n / 1_000_000).toFixed(2)}M`
@@ -57,6 +100,35 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // After a reload or a restart: take the total this session already stored.
+  on('session.start', async ($, e, next) => {
+    const stored = await $.store.get(storeKey(await $.session.id()))
+
+    if (isTally(stored)) {
+      await update($, session, s => (total(s) === 0 ? stored : s))
+    }
+
+    return next(e)
+  })
+
+  // A resumed conversation the mod never counted (or counted before it stored
+  // anything): rebuild the total from the transcript once. A transcript over
+  // 4 MiB cannot be read; the total then starts from zero as before.
+  on('classic.SessionStart', async ($, e, next) => {
+    const key = storeKey(e.session_id)
+
+    if (e.source !== 'startup' && e.source !== 'clear' && !isTally(await $.store.get(key))) {
+      const counted = await $.fs.read(e.transcript_path).then(tallyTranscript, () => null)
+
+      if (counted !== null && total(counted) > 0) {
+        await update($, session, s => (total(s) === 0 ? counted : s))
+        await $.store.set(key, await read($, session))
+      }
+    }
+
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     if (e.usage) {
       const turn = toTally(e.usage)
@@ -69,6 +141,7 @@ export const register: Register = on => {
         input: s.input + turn.input,
         output: s.output + turn.output,
       }))
+      await $.store.set(storeKey(await $.session.id()), await read($, session))
     }
 
     return next(e)
@@ -88,34 +161,49 @@ export const register: Register = on => {
       u => u.context.tokens ?? 0,
       () => 0,
     )
-    const { Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
 
-    // One Text with nested runs: the line flows and wraps as a whole instead of
-    // each run becoming its own block (the desktop stacked them in a column).
+    // space-evenly built by hand, so every surface spaces it the same: a spacer
+    // that grows equally sits after the logo, between the groups and before
+    // the right edge. Each group is one Text with nested runs, so it never
+    // splits apart; a narrow band wraps whole groups to a second row.
+    const gap = (key: string) => <Box key={key} flexGrow={1} minWidth={2} />
+
     return (
-      <Text wrap="wrap">
-        {/* Non-breaking: the desktop collapses a run of plain spaces into one. */}
-        <Text>🪙{'\u00a0\u00a0'}</Text>
-        <Text dimColor> ✎ szkic </Text>
-        <Text bold color="warning">
-          ≈{fmt(typed)}
+      <Box flexDirection="row" flexWrap="wrap" width="100%">
+        <Text>🪙</Text>
+        {gap('g1')}
+        <Text wrap="wrap">
+          <Text dimColor>✎ szkic </Text>
+          <Text bold color="warning">
+            ≈{fmt(typed)}
+          </Text>
+          <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
         </Text>
-        <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
-        <Text dimColor> · wiadomość </Text>
-        <Text bold color="suggestion">
-          {fmt(total(turn))}
+        {gap('g2')}
+        <Text wrap="wrap">
+          <Text dimColor>wiadomość </Text>
+          <Text bold color="suggestion">
+            {fmt(total(turn))}
+          </Text>
+          <Text dimColor>
+            {' '}
+            (↑{fmt(turn.input)} ↓{fmt(turn.output)})
+          </Text>
         </Text>
-        <Text dimColor>
-          {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+        {gap('g3')}
+        <Text wrap="wrap">
+          <Text dimColor>sesja </Text>
+          <Text bold color="success">
+            {fmt(total(sum))}
+          </Text>
+          <Text dimColor>
+            {' '}
+            (↑{fmt(sum.input)} ↓{fmt(sum.output)})
+          </Text>
         </Text>
-        <Text dimColor> · sesja </Text>
-        <Text bold color="success">
-          {fmt(total(sum))}
-        </Text>
-        <Text dimColor>
-          {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
-        </Text>
-      </Text>
+        {gap('g4')}
+      </Box>
     )
   })
 }
