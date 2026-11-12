@@ -15,7 +15,9 @@ Pasek nad polem wiadomości w Claude Code z trzema licznikami:
 
 Pasek jest widoczny cały czas, od startu sesji, ze wszystkimi licznikami od zera; ustępuje tylko ankietom.
 Kolory biorą się z motywu Claude Code, więc pasują do jasnego i ciemnego.
-Wartości trzymane są w `$.state`, więc przetrwają przeładowanie moda w obrębie sesji.
+Suma sesji jest zapisywana (`$.store`, osobno dla każdej sesji), więc po przeładowaniu moda,
+restarcie aplikacji albo wznowieniu rozmowy liczy dalej od tego, co już było.
+Rozmowę wznowioną pierwszy raz mod przelicza z jej zapisu na dysku (do 4 MiB).
 
 ## Instalacja
 
