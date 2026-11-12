@@ -161,34 +161,46 @@ export const register: Register = on => {
       u => u.context.tokens ?? 0,
       () => 0,
     )
-    const { Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
 
-    // One Text with nested runs: the line flows and wraps as a whole instead of
-    // each run becoming its own block (the desktop stacked them in a column).
+    // Three groups spread over the band's width, wrapping to a second row when
+    // narrow. Each group is one Text with nested runs, so it never splits apart.
     return (
-      <Text wrap="wrap">
-        {/* Non-breaking: the desktop collapses a run of plain spaces into one. */}
-        <Text>🪙{'\u00a0\u00a0'}</Text>
-        <Text dimColor> ✎ szkic </Text>
-        <Text bold color="warning">
-          ≈{fmt(typed)}
+      <Box
+        flexDirection="row"
+        flexWrap="wrap"
+        justifyContent="space-between"
+        columnGap={3}
+        width="100%"
+      >
+        <Text wrap="wrap">
+          {/* Non-breaking: the desktop collapses a run of plain spaces into one. */}
+          <Text>🪙{'\u00a0\u00a0'}</Text>
+          <Text dimColor> ✎ szkic </Text>
+          <Text bold color="warning">
+            ≈{fmt(typed)}
+          </Text>
+          <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
         </Text>
-        <Text dimColor> (z kontekstem ≈{fmt(contextTokens + typed)})</Text>
-        <Text dimColor> · wiadomość </Text>
-        <Text bold color="suggestion">
-          {fmt(total(turn))}
+        <Text wrap="wrap">
+          <Text dimColor>wiadomość </Text>
+          <Text bold color="suggestion">
+            {fmt(total(turn))}
+          </Text>
+          <Text dimColor>
+            {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+          </Text>
         </Text>
-        <Text dimColor>
-          {' '}(↑{fmt(turn.input)} ↓{fmt(turn.output)})
+        <Text wrap="wrap">
+          <Text dimColor>sesja </Text>
+          <Text bold color="success">
+            {fmt(total(sum))}
+          </Text>
+          <Text dimColor>
+            {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
+          </Text>
         </Text>
-        <Text dimColor> · sesja </Text>
-        <Text bold color="success">
-          {fmt(total(sum))}
-        </Text>
-        <Text dimColor>
-          {' '}(↑{fmt(sum.input)} ↓{fmt(sum.output)})
-        </Text>
-      </Text>
+      </Box>
     )
   })
 }
