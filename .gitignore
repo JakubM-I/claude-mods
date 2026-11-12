@@ -3,6 +3,8 @@
 
 # Typy generowane przez silnik Claude Code w każdym modzie
 */.claude-plugin/types/
+# ...i tsconfig.json, który silnik dokłada do moda bez własnego (rozszerza te typy)
+*/tsconfig.json
 
 # Node / TypeScript
 node_modules/
